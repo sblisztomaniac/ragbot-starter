@@ -71,7 +71,7 @@ graph LR
 
 ### Step 2: Get Meta Llama API Key (1 minute)
 
-1. Visit [llama.com/llama-stack](https://www.llama.com/llama-stack/)
+1. Visit [llama.developer.meta.com/docs/overview](https://llama.developer.meta.com/docs/overview/)
 2. Sign up and generate API key
 3. Copy your key (starts with `LLM|...`)
 
