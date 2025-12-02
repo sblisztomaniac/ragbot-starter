@@ -536,7 +536,7 @@ npm run seed
 
 - 📖 **Documentation:** [ZERODB_INTEGRATION.md](./ZERODB_INTEGRATION.md)
 - 🐛 **Issues:** [GitHub Issues](https://github.com/AINative-Studio/ragbot-starter/issues)
-- 💬 **Discord:** [Join our community](https://discord.gg/ainative)
+- 💬 **Discord:** [Join our community](https://discord.com/invite/paipalooza)
 - 📧 **Email:** support@ainative.studio
 
 ---
@@ -552,9 +552,10 @@ npm run seed
 
 ### Tutorials
 
-- [Building RAG Systems with ZeroDB](https://docs.ainative.studio/tutorials/rag)
-- [Optimizing Semantic Search](https://docs.ainative.studio/tutorials/semantic-search)
-- [Production Deployment Best Practices](https://docs.ainative.studio/tutorials/deployment)
+- [Implementing RAG with AINative and ZeroDB](https://ainative.studio/tutorials/implementing-rag-with-ainative-and-zerodb)
+- [Creating a Vector Search Application with ZeroDB](https://ainative.studio/tutorials/creating-a-vector-search-application-with-zerodb)
+- [Building Your First AI Chat Application](https://ainative.studio/tutorials/building-your-first-ai-chat-application)
+- [Building Custom MCP Tools for AI Agents](https://ainative.studio/tutorials/building-custom-mcp-tools-for-ai-agents)
 
 ### API Reference
 
@@ -640,4 +641,4 @@ If ZeroDB helped you build something awesome:
 
 **Built with ❤️ by the AINative team**
 
-[Website](https://ainative.studio) • [Docs](https://docs.ainative.studio) • [Discord](https://discord.gg/ainative) • [Twitter](https://twitter.com/ainativestudio) • [GitHub](https://github.com/AINative-Studio)
+[Website](https://ainative.studio) • [ZeroDB](https://zerodb.ainative.studio) • [Docs](https://docs.ainative.studio) • [Discord](https://discord.com/invite/paipalooza) • [Twitter](https://twitter.com/ainativestudio) • [GitHub](https://github.com/AINative-Studio)
