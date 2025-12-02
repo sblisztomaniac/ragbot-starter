@@ -560,8 +560,8 @@ npm run seed
 ### API Reference
 
 - [ZeroDB REST API](https://api.ainative.studio/docs) - Interactive API playground
-- [Embeddings API](https://docs.ainative.studio/api/embeddings) - Detailed embeddings guide
-- [Authentication](https://docs.ainative.studio/api/auth) - Auth methods and security
+- [Embeddings API](https://api.ainative.studio/docs) - Detailed embeddings guide
+- [Authentication](https://api.ainative.studio/docs) - Auth methods and security
 
 ---
 
