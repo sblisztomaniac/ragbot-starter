@@ -548,7 +548,7 @@ npm run seed
 - [ZERODB_INTEGRATION.md](./ZERODB_INTEGRATION.md) - Complete ZeroDB integration guide
 - [MIGRATION_SUMMARY.md](./MIGRATION_SUMMARY.md) - Migration from OpenAI to ZeroDB
 - [TEST_RESULTS.md](./TEST_RESULTS.md) - Comprehensive test results
-- [ZeroDB Developer Guide](https://docs.ainative.studio) - Official API documentation
+- [ZeroDB Developer Guide](https://zerodb.ainative.studio) - Official API documentation
 
 ### Tutorials
 
