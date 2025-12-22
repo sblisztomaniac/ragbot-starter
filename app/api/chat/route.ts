@@ -32,11 +32,10 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           query: latestMessage,
-          top_k: ZERODB_TOP_K,
+          limit: ZERODB_TOP_K,  // Correct parameter name per API docs
+          threshold: ZERODB_SIMILARITY_THRESHOLD,  // Correct parameter name per API docs
           namespace: ZERODB_NAMESPACE,
-          similarity_threshold: ZERODB_SIMILARITY_THRESHOLD,
-          include_metadata: true,
-          include_embeddings: false
+          model: 'BAAI/bge-small-en-v1.5'  // Specify model explicitly
         })
       });
 
@@ -78,10 +77,10 @@ export async function POST(req: Request) {
       // Extract sources - show top 3-5 most relevant
       sources = documents.slice(0, 5).map((doc: any, idx: number) => {
         // Try to get title from metadata first
-        const metadataTitle = doc.metadata?.title || doc.metadata?.source || doc.metadata?.name;
+        const metadataTitle = doc.vector_metadata?.title || doc.vector_metadata?.source || doc.vector_metadata?.name;
         if (metadataTitle) return metadataTitle;
 
-        const text = doc.text || '';
+        const text = doc.document || '';  // API returns 'document' field
         const lines = text.split('\n').filter((l: string) => l.trim().length > 0);
 
         // Find the first meaningful line (skip separators and very short lines)
@@ -97,7 +96,7 @@ export async function POST(req: Request) {
 
       docContext = `
         START CONTEXT
-        ${documents.map((doc: any) => doc.text || '').join("\n\n---\n\n")}
+        ${documents.map((doc: any) => doc.document || '').join("\n\n---\n\n")}
         END CONTEXT
       `;
     }
