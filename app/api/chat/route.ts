@@ -34,8 +34,9 @@ export async function POST(req: Request) {
           query: latestMessage,
           top_k: ZERODB_TOP_K,
           namespace: ZERODB_NAMESPACE,
-          threshold: ZERODB_SIMILARITY_THRESHOLD,
-          similarity_metric: similarityMetric || 'cosine'
+          similarity_threshold: ZERODB_SIMILARITY_THRESHOLD,
+          include_metadata: true,
+          include_embeddings: false
         })
       });
 
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
         const metadataTitle = doc.metadata?.title || doc.metadata?.source || doc.metadata?.name;
         if (metadataTitle) return metadataTitle;
 
-        const text = doc.document || doc.text || '';
+        const text = doc.text || '';
         const lines = text.split('\n').filter((l: string) => l.trim().length > 0);
 
         // Find the first meaningful line (skip separators and very short lines)
@@ -96,7 +97,7 @@ export async function POST(req: Request) {
 
       docContext = `
         START CONTEXT
-        ${documents.map((doc: any) => doc.document || doc.text || '').join("\n\n---\n\n")}
+        ${documents.map((doc: any) => doc.text || '').join("\n\n---\n\n")}
         END CONTEXT
       `;
     }
