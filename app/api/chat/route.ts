@@ -1,8 +1,8 @@
 // Using node-fetch for Meta Llama API calls (avoiding OpenAI SDK undici timeout issues)
 import nodeFetch from 'node-fetch';
-import { pipeline } from '@xenova/transformers';
 
 // Note: Using node-fetch directly instead of OpenAI SDK to avoid undici timeout issues
+// Note: Using ZeroDB's embedding API instead of loading transformers locally (to avoid Netlify timeout)
 
 const ZERODB_API_URL = process.env.ZERODB_API_URL!;
 const ZERODB_PROJECT_ID = process.env.ZERODB_PROJECT_ID!;
@@ -11,13 +11,27 @@ const ZERODB_NAMESPACE = process.env.ZERODB_NAMESPACE || 'transmutes_only';
 const ZERODB_TOP_K = parseInt(process.env.ZERODB_TOP_K || '5');
 const ZERODB_SIMILARITY_THRESHOLD = parseFloat(process.env.ZERODB_SIMILARITY_THRESHOLD || '0.7');
 
-// Initialize embedding model (384-dim)
-let embedder: any = null;
-async function getEmbedder() {
-  if (!embedder) {
-    embedder = await pipeline('feature-extraction', 'Xenova/bge-small-en-v1.5');
+// Generate embedding using ZeroDB's API (faster and works on Netlify serverless)
+async function generateEmbedding(text: string): Promise<number[]> {
+  const response = await nodeFetch(`${ZERODB_API_URL}/v1/public/${ZERODB_PROJECT_ID}/embeddings`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': ZERODB_API_KEY,
+    },
+    body: JSON.stringify({
+      texts: [text],
+      model: 'BAAI/bge-small-en-v1.5'
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`ZeroDB embedding failed: ${response.status} - ${errorText}`);
   }
-  return embedder;
+
+  const data: any = await response.json();
+  return data.embeddings[0];
 }
 
 export async function POST(req: Request) {
@@ -29,11 +43,9 @@ export async function POST(req: Request) {
     let docContext = '';
     let sources: string[] = [];
     if (useRag) {
-      console.log('🔮 Generating query embedding locally (384-dim)...');
-      // Generate embedding for query using local model
-      const embeddingModel = await getEmbedder();
-      const output = await embeddingModel(latestMessage, { pooling: 'mean', normalize: true });
-      const queryVector = Array.from(output.data);
+      console.log('🔮 Generating query embedding via ZeroDB API...');
+      // Generate embedding using ZeroDB's embedding API
+      const queryVector = await generateEmbedding(latestMessage);
       console.log(`✅ Generated ${queryVector.length}-dim embedding`);
 
       console.log('🔍 Searching ZeroDB knowledge base...');
@@ -194,8 +206,17 @@ export async function POST(req: Request) {
     return new Response(content, {
       headers: { 'Content-Type': 'text/plain' },
     });
-  } catch (e) {
-    console.error('Meta Llama API Error:', e);
-    throw e;
+  } catch (e: any) {
+    console.error('API Error:', e);
+    return new Response(
+      JSON.stringify({
+        error: e.message || 'Internal server error',
+        details: e.toString()
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 }
