@@ -1,6 +1,7 @@
 "use client";
 import {useEffect, useRef, useState} from 'react';
 import Bubble from '../components/Bubble'
+import LoadingBubble from '../components/LoadingBubble'
 import { useChat, Message } from 'ai/react';
 import Footer from '../components/Footer';
 import Configure from '../components/Configure';
@@ -12,7 +13,7 @@ import useConversations from './hooks/useConversations';
 
 
 export default function Home() {
-  const { append, messages, input, handleInputChange, handleSubmit, setMessages } = useChat();
+  const { append, messages, input, handleInputChange, handleSubmit, setMessages, isLoading } = useChat();
   const { useRag, llm, similarityMetric, setConfiguration } = useConfiguration();
   const {
     currentConversationId,
@@ -150,9 +151,12 @@ export default function Home() {
                 <p className='text-gray-700 dark:text-gray-400 text-center max-w-md'>Explore ancient teachings from enlightened masters. Ask about consciousness, meditation, self-inquiry, and the nature of reality.</p>
               </div>
             ) : (
-              messages.map((message, index) => (
-                <Bubble ref={messagesEndRef} key={`message-${index}`} content={message} />
-              ))
+              <>
+                {messages.map((message, index) => (
+                  <Bubble ref={messagesEndRef} key={`message-${index}`} content={message} />
+                ))}
+                {isLoading && <LoadingBubble />}
+              </>
             )}
           </div>
         </div>
@@ -169,13 +173,14 @@ export default function Home() {
                 <input
                   onChange={handleInputChange}
                   value={input}
-                  className='w-full px-4 py-3 rounded-xl backdrop-blur-sm bg-white dark:bg-slate-800 border-2 border-[#F6A135]/30 dark:border-[#F6A135]/30 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#F6A135] dark:focus:ring-[#F6A135] focus:border-[#F6A135] dark:focus:border-[#F6A135] shadow-lg transition-all duration-200'
+                  disabled={isLoading}
+                  className='w-full px-4 py-3 rounded-xl backdrop-blur-sm bg-white dark:bg-slate-800 border-2 border-[#F6A135]/30 dark:border-[#F6A135]/30 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#F6A135] dark:focus:ring-[#F6A135] focus:border-[#F6A135] dark:focus:border-[#F6A135] shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
                   placeholder='Ask about consciousness, meditation, or wisdom teachings...'
                 />
               </div>
               <button
                 type="submit"
-                disabled={!input.trim()}
+                disabled={!input.trim() || isLoading}
                 className='px-5 py-3 rounded-xl backdrop-blur-xl bg-[#F6A135]/90 hover:bg-[#F6A135] text-white font-medium shadow-lg shadow-[#F6A135]/30 hover:shadow-xl hover:shadow-[#F6A135]/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-[1.02] flex items-center gap-2 border border-[#F6A135]/20'
               >
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
