@@ -11,28 +11,7 @@ const ZERODB_NAMESPACE = process.env.ZERODB_NAMESPACE || 'transmutes_only';
 const ZERODB_TOP_K = parseInt(process.env.ZERODB_TOP_K || '5');
 const ZERODB_SIMILARITY_THRESHOLD = parseFloat(process.env.ZERODB_SIMILARITY_THRESHOLD || '0.7');
 
-// Generate embedding using ZeroDB's API (faster and works on Netlify serverless)
-async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await nodeFetch(`${ZERODB_API_URL}/v1/public/${ZERODB_PROJECT_ID}/embeddings`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': ZERODB_API_KEY,
-    },
-    body: JSON.stringify({
-      texts: [text],
-      model: 'BAAI/bge-small-en-v1.5'
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`ZeroDB embedding failed: ${response.status} - ${errorText}`);
-  }
-
-  const data: any = await response.json();
-  return data.embeddings[0];
-}
+// Removed generateEmbedding function - using semantic search directly instead
 
 export async function POST(req: Request) {
   try {
@@ -43,25 +22,20 @@ export async function POST(req: Request) {
     let docContext = '';
     let sources: string[] = [];
     if (useRag) {
-      console.log('🔮 Generating query embedding via ZeroDB API...');
-      // Generate embedding using ZeroDB's embedding API
-      const queryVector = await generateEmbedding(latestMessage);
-      console.log(`✅ Generated ${queryVector.length}-dim embedding`);
-
-      console.log('🔍 Searching ZeroDB knowledge base...');
-      // Search using direct vector search endpoint
-      const searchResponse = await nodeFetch(`${ZERODB_API_URL}/v1/public/${ZERODB_PROJECT_ID}/database/vectors/search`, {
+      console.log('🔍 Searching ZeroDB knowledge base with semantic search...');
+      // Use semantic search endpoint (handles embedding generation automatically)
+      const searchResponse = await nodeFetch(`${ZERODB_API_URL}/v1/public/${ZERODB_PROJECT_ID}/embeddings/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-API-Key': ZERODB_API_KEY,
         },
         body: JSON.stringify({
-          query_vector: queryVector,
-          limit: ZERODB_TOP_K,
-          threshold: ZERODB_SIMILARITY_THRESHOLD,
+          query: latestMessage,
+          top_k: ZERODB_TOP_K,
           namespace: ZERODB_NAMESPACE,
-          filter_metadata: similarityMetric ? { similarity_metric: similarityMetric } : undefined
+          threshold: ZERODB_SIMILARITY_THRESHOLD,
+          similarity_metric: similarityMetric || 'cosine'
         })
       });
 
@@ -81,7 +55,7 @@ export async function POST(req: Request) {
       }
 
       const searchResults = await searchResponse.json();
-      const documents = searchResults.vectors || [];
+      const documents = searchResults.results || searchResults.vectors || [];
       console.log(`✅ Found ${documents.length} relevant documents`);
 
       // Debug: log first document structure
