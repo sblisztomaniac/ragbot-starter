@@ -94,6 +94,28 @@ export default function Home() {
     append(msg, { options: { body: { useRag, llm, similarityMetric}}});
   };
 
+  const handleSaveConversation = async () => {
+    if (messages.length === 0 || !currentConversationId) {
+      alert('No conversation to save');
+      return;
+    }
+
+    try {
+      await updateConversation(currentConversationId, messages);
+      // Show success feedback
+      const button = document.getElementById('save-button');
+      if (button) {
+        button.textContent = '✓ Saved';
+        setTimeout(() => {
+          button.textContent = 'Save';
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Failed to save conversation:', error);
+      alert('Failed to save conversation');
+    }
+  };
+
   return (
     <>
     <main className="flex h-screen overflow-hidden bg-gradient-to-br from-[#EAE6DF] via-white to-[#00A3A1]/10 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -130,6 +152,18 @@ export default function Home() {
               </div>
             </div>
             <div className='flex gap-2'>
+              <button
+                id="save-button"
+                onClick={handleSaveConversation}
+                disabled={messages.length === 0}
+                className='px-3 py-2 rounded-lg backdrop-blur-sm bg-[#00A3A1]/10 hover:bg-[#00A3A1]/20 border border-[#00A3A1]/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'
+                title="Save conversation to ZeroDB"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-[#00A3A1]">
+                  <path d="M17 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V7L17 3ZM19 19H5V5H16.17L19 7.83V19ZM12 12C10.34 12 9 13.34 9 15C9 16.66 10.34 18 12 18C13.66 18 15 16.66 15 15C15 13.34 13.66 12 12 12ZM6 6H15V10H6V6Z" />
+                </svg>
+                <span className="text-sm font-medium text-[#00A3A1] hidden sm:block">Save</span>
+              </button>
               <ThemeButton />
               <button
                 onClick={() => setConfigureOpen(true)}

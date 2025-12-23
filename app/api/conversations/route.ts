@@ -11,6 +11,15 @@ export async function POST(req: NextRequest) {
     if (action === 'store') {
       console.log('Storing conversation:', conversationId, 'with', messages.length, 'messages');
 
+      // Generate a UUID for session_id (use conversation ID or create new UUID)
+      // ZeroDB Memory API requires UUIDs, not arbitrary strings
+      const sessionUuid = conversationId.includes('-') && conversationId.length >= 36
+        ? conversationId
+        : crypto.randomUUID();
+
+      // Use a fixed UUID for agent_id (transmutes chatbot)
+      const agentUuid = '00000000-0000-0000-0000-000000000001';
+
       // Store all messages for a conversation
       const storePromises = messages.map((msg: any) =>
         fetch(`https://api.ainative.studio/v1/public/${ZERODB_PROJECT_ID}/database/memory`, {
@@ -20,12 +29,13 @@ export async function POST(req: NextRequest) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            session_id: conversationId,
-            agent_id: 'transmutes_chatbot',
+            session_id: sessionUuid,
+            agent_id: agentUuid,
             role: msg.role,
             content: msg.content,
             metadata: {
               message_id: msg.id,
+              original_conversation_id: conversationId,
               timestamp: new Date().toISOString(),
             },
           }),
@@ -35,7 +45,7 @@ export async function POST(req: NextRequest) {
       const results = await Promise.all(storePromises);
       console.log('Stored messages:', results);
 
-      return NextResponse.json({ success: true, count: messages.length });
+      return NextResponse.json({ success: true, count: messages.length, sessionUuid });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -82,9 +92,12 @@ export async function GET(req: NextRequest) {
     const data = await response.json();
     console.log('Retrieved all memories, filtering for session:', conversationId);
 
-    // Filter memories by session_id
+    // Filter memories by session_id (UUID) OR original_conversation_id in metadata
     const sessionMemories = (data.memories || [])
-      .filter((item: any) => item.session_id === conversationId)
+      .filter((item: any) =>
+        item.session_id === conversationId ||
+        item.metadata?.original_conversation_id === conversationId
+      )
       .sort((a: any, b: any) => {
         // Sort by timestamp or creation order
         const timeA = new Date(a.created_at || a.metadata?.timestamp || 0).getTime();
@@ -92,7 +105,7 @@ export async function GET(req: NextRequest) {
         return timeA - timeB;
       });
 
-    console.log('Found memories for session:', sessionMemories.length);
+    console.log('Found memories for session:', sessionMemories.length, 'from total:', (data.memories || []).length);
 
     // Transform ZeroDB memory format back to message format
     const messages = sessionMemories.map((item: any) => ({
