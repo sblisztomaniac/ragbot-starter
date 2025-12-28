@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cache Cleared</title>
+  <script>
+    // Clear all caches
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => caches.delete(name));
+      });
+    }
+    
+    // Clear localStorage
+    localStorage.clear();
+    
+    // Clear sessionStorage
+    sessionStorage.clear();
+    
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1000);
+  </script>
+</head>
+<body>
+  <h1>Clearing cache...</h1>
+  <p>Redirecting to home page...</p>
+</body>
+</html>
