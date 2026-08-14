@@ -21,12 +21,12 @@ export async function POST(req: Request) {
 
     // Server is authoritative about the model. Honor the client's dropdown choice only
     // if it's a model our provider (Groq) actually serves; otherwise fall back to
-    // META_MODEL. This prevents stale browser localStorage (old Meta model names) from
+    // GROQ_MODEL. This prevents stale browser localStorage (old model names) from
     // sending an invalid model and breaking chat.
     const ALLOWED_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
     const model = (typeof llm === 'string' && ALLOWED_MODELS.includes(llm))
       ? llm
-      : (process.env.META_MODEL || 'llama-3.3-70b-versatile');
+      : (process.env.GROQ_MODEL || 'llama-3.3-70b-versatile');
 
     let docContext = '';
     let sources: string[] = [];
@@ -154,11 +154,11 @@ export async function POST(req: Request) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    const apiResponse = await nodeFetch(`${process.env.META_BASE_URL}/chat/completions`, {
+    const apiResponse = await nodeFetch(`${process.env.GROQ_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.META_API_KEY}`,
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
         model,

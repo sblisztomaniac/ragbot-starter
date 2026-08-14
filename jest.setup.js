@@ -3,14 +3,14 @@ import '@testing-library/jest-dom'
 import { setupMockServer } from './__tests__/mocks/server'
 
 // Mock environment variables
-process.env.META_API_KEY = 'test-meta-api-key'
-process.env.META_BASE_URL = 'https://api.llama.com/compat/v1'
-process.env.META_MODEL = 'Llama-4-Maverick-17B-128E-Instruct-FP8'
-process.env.ZERODB_API_URL = 'https://api.ainative.studio'
-process.env.ZERODB_PROJECT_ID = 'test-project-id'
-process.env.ZERODB_EMAIL = 'test@example.com'
-process.env.ZERODB_PASSWORD = 'test-password'
-process.env.ZERODB_API_KEY = 'test-api-key'
+process.env.GROQ_API_KEY = 'test-groq-api-key'
+process.env.GROQ_BASE_URL = 'https://api.groq.com/openai/v1'
+process.env.GROQ_MODEL = 'llama-3.3-70b-versatile'
+process.env.UPSTASH_VECTOR_REST_URL = 'https://test-index.upstash.io'
+process.env.UPSTASH_VECTOR_REST_TOKEN = 'test-upstash-token'
+process.env.UPSTASH_NAMESPACE = ''
+process.env.UPSTASH_TOP_K = '5'
+process.env.UPSTASH_SCORE_THRESHOLD = '0.68'
 
 // Setup MSW server for API mocking
 setupMockServer()
