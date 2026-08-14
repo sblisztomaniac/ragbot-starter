@@ -21,9 +21,8 @@ const Configure = ({ isOpen, onClose, useRag, llm, similarityMetric, setConfigur
   if (!isOpen) return null;
 
   const llmOptions = [
-    { label: 'Llama 4 Maverick 17B', value: 'Llama-4-Maverick-17B-128E-Instruct-FP8' },
-    { label: 'Llama 3.3 70B', value: 'Llama3.3-70B-Instruct' },
-    { label: 'Llama 3.1 405B', value: 'Llama3.1-405B-Instruct' }
+    { label: 'Llama 3.3 70B (Groq)', value: 'llama-3.3-70b-versatile' },
+    { label: 'Llama 3.1 8B Instant (Groq)', value: 'llama-3.1-8b-instant' }
   ];
 
   const similarityMetricOptions = [

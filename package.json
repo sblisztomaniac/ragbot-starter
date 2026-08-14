@@ -8,6 +8,8 @@
     "build:with-seed": "next build && npm run seed",
     "start": "next start",
     "seed": "NODE_OPTIONS='--dns-result-order=ipv4first' ts-node ./scripts/populateDb.ts",
+    "seed:upstash": "node ./scripts/seedUpstash.js",
+    "test:upstash": "node ./scripts/testUpstash.js",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
