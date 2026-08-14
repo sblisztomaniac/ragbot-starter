@@ -4,14 +4,13 @@ import { useState, useEffect } from 'react';
 
 export type SimilarityMetric = "cosine" | "euclidean" | "dot_product";
 
-// Valid Meta Llama models
+// Valid Groq-hosted Llama models (must match ALLOWED_MODELS in app/api/chat/route.ts)
 const VALID_LLAMA_MODELS = [
-  'Llama-4-Maverick-17B-128E-Instruct-FP8',
-  'Llama3.3-70B-Instruct',
-  'Llama3.1-405B-Instruct'
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant'
 ];
 
-const DEFAULT_LLAMA_MODEL = 'Llama-4-Maverick-17B-128E-Instruct-FP8';
+const DEFAULT_LLAMA_MODEL = 'llama-3.3-70b-versatile';
 
 const useConfiguration = () => {
   // Safely get values from localStorage

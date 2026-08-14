@@ -4,14 +4,14 @@ import nodeFetch from 'node-fetch';
 // Note: Using node-fetch directly instead of OpenAI SDK to avoid undici timeout issues
 // Note: Using ZeroDB's embedding API instead of loading transformers locally (to avoid Netlify timeout)
 
-const ZERODB_API_URL = process.env.ZERODB_API_URL!;
-const ZERODB_PROJECT_ID = process.env.ZERODB_PROJECT_ID!;
-const ZERODB_API_KEY = process.env.ZERODB_API_KEY!;
-const ZERODB_NAMESPACE = process.env.ZERODB_NAMESPACE || 'transmutes_only';
-const ZERODB_TOP_K = parseInt(process.env.ZERODB_TOP_K || '5');
-const ZERODB_SIMILARITY_THRESHOLD = parseFloat(process.env.ZERODB_SIMILARITY_THRESHOLD || '0.7');
-
-// Removed generateEmbedding function - using semantic search directly instead
+// Upstash Vector — serverless vector DB with built-in embeddings (BAAI/bge-small-en-v1.5).
+// We send raw text via the /query-data endpoint and Upstash embeds it for us.
+const UPSTASH_VECTOR_REST_URL = process.env.UPSTASH_VECTOR_REST_URL!;
+const UPSTASH_VECTOR_REST_TOKEN = process.env.UPSTASH_VECTOR_REST_TOKEN!;
+const UPSTASH_NAMESPACE = process.env.UPSTASH_NAMESPACE || ''; // '' = default namespace
+const UPSTASH_TOP_K = parseInt(process.env.UPSTASH_TOP_K || '5');
+// Min normalized similarity score (0-1). 0 = no filtering. Tune after seeding.
+const UPSTASH_SCORE_THRESHOLD = parseFloat(process.env.UPSTASH_SCORE_THRESHOLD || '0');
 
 export async function POST(req: Request) {
   try {
@@ -19,30 +19,40 @@ export async function POST(req: Request) {
 
     const latestMessage = messages[messages?.length - 1]?.content;
 
+    // Server is authoritative about the model. Honor the client's dropdown choice only
+    // if it's a model our provider (Groq) actually serves; otherwise fall back to
+    // META_MODEL. This prevents stale browser localStorage (old Meta model names) from
+    // sending an invalid model and breaking chat.
+    const ALLOWED_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+    const model = (typeof llm === 'string' && ALLOWED_MODELS.includes(llm))
+      ? llm
+      : (process.env.META_MODEL || 'llama-3.3-70b-versatile');
+
     let docContext = '';
     let sources: string[] = [];
     if (useRag) {
-      console.log('🔍 Searching ZeroDB knowledge base with semantic search...');
-      // Use semantic search endpoint (handles embedding generation automatically)
-      const searchResponse = await nodeFetch(`${ZERODB_API_URL}/v1/public/${ZERODB_PROJECT_ID}/embeddings/search`, {
+      console.log('🔍 Searching Upstash Vector knowledge base...');
+      // /query-data embeds the raw text with the index's built-in model, then searches.
+      // Namespace is part of the path; omit it to hit the default namespace.
+      const nsPath = UPSTASH_NAMESPACE ? `/query-data/${UPSTASH_NAMESPACE}` : '/query-data';
+      const searchResponse = await nodeFetch(`${UPSTASH_VECTOR_REST_URL}${nsPath}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': ZERODB_API_KEY,
+          'Authorization': `Bearer ${UPSTASH_VECTOR_REST_TOKEN}`,
         },
         body: JSON.stringify({
-          query: latestMessage,
-          limit: ZERODB_TOP_K,  // Correct parameter name per API docs
-          threshold: ZERODB_SIMILARITY_THRESHOLD,  // Correct parameter name per API docs
-          namespace: ZERODB_NAMESPACE,
-          model: 'BAAI/bge-small-en-v1.5'  // Specify model explicitly
+          data: latestMessage,
+          topK: UPSTASH_TOP_K,
+          includeMetadata: true, // default is false — required for source citations
+          includeData: true,     // default is false — required or docContext is empty
         })
       });
 
       if (!searchResponse.ok) {
         const error = await searchResponse.text();
-        console.error(`❌ ZeroDB search failed: ${searchResponse.status} - ${error}`);
-        // NO GRACEFUL DEGRADATION - Return error to user
+        // Vector store is unreachable / misconfigured — a real outage, not "no results".
+        console.error(`❌ Upstash Vector unreachable: ${searchResponse.status} - ${error}`);
         return new Response(
           JSON.stringify({
             error: 'Knowledge base unavailable. I can only answer questions based on spiritual wisdom teachings from my knowledge base. Please try again in a moment.'
@@ -55,16 +65,21 @@ export async function POST(req: Request) {
       }
 
       const searchResults = await searchResponse.json();
-      const documents = searchResults.results || searchResults.vectors || [];
-      console.log(`✅ Found ${documents.length} relevant documents`);
+      let documents = (searchResults.result || []) as any[];
 
-      // Debug: log first document structure
+      // Upstash returns topK results sorted by score (0-1, higher = more similar).
+      // Optionally drop weak matches below the configured threshold.
+      if (UPSTASH_SCORE_THRESHOLD > 0) {
+        documents = documents.filter((doc: any) => (doc.score ?? 0) >= UPSTASH_SCORE_THRESHOLD);
+      }
+      console.log(`✅ Retrieved ${documents.length} chunks (topK=${UPSTASH_TOP_K}, threshold=${UPSTASH_SCORE_THRESHOLD})`);
+
       if (documents.length > 0) {
-        console.log('Sample document structure:', JSON.stringify(documents[0], null, 2).substring(0, 500));
+        console.log('Top match score:', documents[0].score, 'title:', documents[0].metadata?.title);
       }
 
       if (documents.length === 0) {
-        // NO GRACEFUL DEGRADATION - If no documents found, inform user
+        // Store reachable but nothing relevant — a legitimate empty result, not an outage.
         return new Response(
           "I apologize, but I couldn't find any relevant teachings in my knowledge base to answer your question. My responses are based solely on the spiritual wisdom teachings I have access to. Please try rephrasing your question or ask about topics related to meditation, self-inquiry, consciousness, or spiritual practice.",
           {
@@ -74,29 +89,26 @@ export async function POST(req: Request) {
         );
       }
 
-      // Extract sources - show top 3-5 most relevant
+      // Extract sources - show top 3-5 most relevant (titles from metadata)
       sources = documents.slice(0, 5).map((doc: any, idx: number) => {
-        // Try to get title from metadata first
-        const metadataTitle = doc.vector_metadata?.title || doc.vector_metadata?.source || doc.vector_metadata?.name;
+        const md = doc.metadata || {};
+        const metadataTitle = md.title || md.source || md.url;
         if (metadataTitle) return metadataTitle;
 
-        const text = doc.document || '';  // API returns 'document' field
+        const text = doc.data || '';
         const lines = text.split('\n').filter((l: string) => l.trim().length > 0);
-
-        // Find the first meaningful line (skip separators and very short lines)
         for (const line of lines) {
           const trimmed = line.trim();
           if (trimmed.length > 15 && trimmed !== '---' && !trimmed.startsWith('http')) {
             return trimmed.length > 50 ? trimmed.substring(0, 50) + '...' : trimmed;
           }
         }
-
         return `Source ${idx + 1}`;
       });
 
       docContext = `
         START CONTEXT
-        ${documents.map((doc: any) => doc.document || '').join("\n\n---\n\n")}
+        ${documents.map((doc: any) => doc.data || '').join("\n\n---\n\n")}
         END CONTEXT
       `;
     }
@@ -132,8 +144,8 @@ export async function POST(req: Request) {
       content: msg.content
     }));
 
-    console.log('Sending to Meta Llama:', JSON.stringify({
-      model: llm ?? process.env.META_MODEL,
+    console.log('Sending to Groq:', JSON.stringify({
+      model,
       messageCount: cleanMessages.length,
       messages: cleanMessages
     }, null, 2));
@@ -149,7 +161,7 @@ export async function POST(req: Request) {
         'Authorization': `Bearer ${process.env.META_API_KEY}`,
       },
       body: JSON.stringify({
-        model: llm ?? process.env.META_MODEL ?? 'Llama-4-Maverick-17B-128E-Instruct-FP8',
+        model,
         messages: cleanMessages,
         max_tokens: 1000,
       }),

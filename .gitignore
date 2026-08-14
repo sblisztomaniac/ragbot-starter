@@ -200,3 +200,8 @@ logs/
 # Temporary files
 *.tmp
 .cache/tsconfig.tsbuildinfo
+
+# All local env files (incl. .rtf exports)
+.env
+.env.*
+!.env.example
